@@ -11,7 +11,7 @@ RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 # additional software aka dev tools
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-        curl git ripgrep \
+        curl git ripgrep fd-find \
     && rm -rf /var/lib/apt/lists/*
 
 # user setup
@@ -29,3 +29,5 @@ RUN git config --global user.name "pi coding agent" \
  && git config --global branch.master.mergeoptions --ff-only \
  && git config --global branch.main.rebase false \
  && git config --global branch.main.mergeoptions --ff-only
+
+ CMD [ "/bin/bash" ]
