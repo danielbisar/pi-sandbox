@@ -30,4 +30,4 @@ RUN git config --global user.name "pi coding agent" \
  && git config --global branch.main.rebase false \
  && git config --global branch.main.mergeoptions --ff-only
 
- CMD [ "/bin/bash" ]
+ CMD [ "/usr/local/bin/pi" ]
