@@ -4,21 +4,62 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
-    echo "Usage: $0 <repo_path> [extensions_path]"
+    echo "Usage: $0 [--extensions <extensions_path>] [--skills <skill_path>]... [--shell] <repo_path>"
+    echo
+    echo "Options:"
+    echo "  --extensions <path>    Optional path to custom extensions folder"
+    echo "  --skills <path>        Optional path to a custom skill folder; may be repeated"
+    echo "  --skill <path>         Alias for --skills"
+    echo "  --shell                Run /bin/bash instead of pi"
+    echo "  -h, --help             Show this help message"
     echo
     echo "Arguments:"
-    echo "  repo_path         Path to the repository for the agent to work on"
-    echo "  extensions_path   Optional path to custom extensions folder"
+    echo "  repo_path              Path to the repository for the agent to work on"
     exit 0
 }
 
-if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-    usage
-fi
+repo_path=""
+extensions_path=""
+skills_paths=()
+run_shell=false
 
-repo_path="${1:?Usage: $0 <repo_path> [extensions_path]}"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)
+            usage
+            ;;
+        --extensions)
+            [[ $# -ge 2 ]] || { echo "Error: --extensions requires a path" >&2; exit 1; }
+            extensions_path="$2"
+            shift 2
+            ;;
+        --skills|--skill)
+            [[ $# -ge 2 ]] || { echo "Error: $1 requires a path" >&2; exit 1; }
+            skills_paths+=("$2")
+            shift 2
+            ;;
+        --shell)
+            run_shell=true
+            shift
+            ;;
+        --*)
+            echo "Error: Unknown option: $1" >&2
+            usage
+            ;;
+        *)
+            if [[ -z "$repo_path" ]]; then
+                repo_path="$1"
+                shift
+            else
+                echo "Error: Unexpected argument: $1" >&2
+                usage
+            fi
+            ;;
+    esac
+done
+
+[[ -n "$repo_path" ]] || { echo "Error: repo_path is required" >&2; usage; }
 repo_path="$(cd "$repo_path" && pwd)"
-extensions_path="${2:-}"
 
 pi_settings="$script_dir/pi"
 
@@ -35,4 +76,27 @@ if [[ -n "$extensions_path" ]]; then
     docker_args+=(-v "$extensions_path:/home/pi/.pi/agent/extensions")
 fi
 
-docker run "${docker_args[@]}" pi-agent:latest
+if [[ ${#skills_paths[@]} -gt 0 ]]; then
+    declare -A used_skill_mounts=()
+
+    for skill_path in "${skills_paths[@]}"; do
+        skill_path="$(cd "$skill_path" && pwd)"
+        skill_name="$(basename "$skill_path")"
+        mount_name="$skill_name"
+        suffix=2
+
+        while [[ -n "${used_skill_mounts[$mount_name]:-}" ]]; do
+            mount_name="${skill_name}-${suffix}"
+            ((suffix++))
+        done
+
+        used_skill_mounts["$mount_name"]=1
+        docker_args+=(-v "$skill_path:/home/pi/.pi/agent/skills/$mount_name")
+    done
+fi
+
+if [[ "$run_shell" == true ]]; then
+    docker run "${docker_args[@]}" pi-agent:latest /bin/bash
+else
+    docker run "${docker_args[@]}" pi-agent:latest
+fi
