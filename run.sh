@@ -4,12 +4,13 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
-    echo "Usage: $0 [--extensions <extensions_path>] [--skills <skill_path>]... [--shell] <repo_path>"
+    echo "Usage: $0 [--extensions <extensions_path>] [--skills <skill_path>]... [--session <session_id>] [--shell] <repo_path>"
     echo
     echo "Options:"
     echo "  --extensions <path>    Optional path to custom extensions folder"
     echo "  --skills <path>        Optional path to a custom skill folder; may be repeated"
     echo "  --skill <path>         Alias for --skills"
+    echo "  --session <id>         Optional pi session ID to resume"
     echo "  --shell                Run /bin/bash instead of pi"
     echo "  -h, --help             Show this help message"
     echo
@@ -21,6 +22,7 @@ usage() {
 repo_path=""
 extensions_path=""
 skills_paths=()
+session_id=""
 run_shell=false
 
 while [[ $# -gt 0 ]]; do
@@ -36,6 +38,11 @@ while [[ $# -gt 0 ]]; do
         --skills|--skill)
             [[ $# -ge 2 ]] || { echo "Error: $1 requires a path" >&2; exit 1; }
             skills_paths+=("$2")
+            shift 2
+            ;;
+        --session)
+            [[ $# -ge 2 ]] || { echo "Error: --session requires a session ID" >&2; exit 1; }
+            session_id="$2"
             shift 2
             ;;
         --shell)
@@ -98,5 +105,11 @@ fi
 if [[ "$run_shell" == true ]]; then
     docker run "${docker_args[@]}" pi-agent:latest /bin/bash
 else
-    docker run "${docker_args[@]}" pi-agent:latest
+    pi_args=()
+
+    if [[ -n "$session_id" ]]; then
+        pi_args+=(--session "$session_id")
+    fi
+
+    docker run "${docker_args[@]}" pi-agent:latest /usr/local/bin/pi "${pi_args[@]}"
 fi
