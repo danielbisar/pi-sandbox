@@ -2,6 +2,7 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$script_dir/shared.sh"
 
 usage() {
     echo "Usage: $0 [--extensions <extensions_path>] [--skills <skill_path>]... [--session <session_id>] [--shell] <repo_path>"
@@ -103,7 +104,7 @@ if [[ ${#skills_paths[@]} -gt 0 ]]; then
 fi
 
 if [[ "$run_shell" == true ]]; then
-    docker run "${docker_args[@]}" pi-agent:latest /bin/bash
+    $container_cli run "${docker_args[@]}" pi-agent:latest /bin/bash
 else
     pi_args=()
 
@@ -111,5 +112,5 @@ else
         pi_args+=(--session "$session_id")
     fi
 
-    docker run "${docker_args[@]}" pi-agent:latest /usr/local/bin/pi "${pi_args[@]}"
+    $container_cli run "${docker_args[@]}" pi-agent:latest /usr/local/bin/pi "${pi_args[@]}"
 fi

@@ -31,3 +31,9 @@ Run `./run.sh --help` for details.
 ```bash
 ./build.sh
 ```
+
+If your network intercepts TLS with a private CA, provide the PEM contents as `NPM_EXTRA_CA_CERT` when building:
+
+```bash
+NPM_EXTRA_CA_CERT="$(cat /path/to/corp-ca.pem)" ./build.sh
+```

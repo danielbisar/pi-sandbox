@@ -1,10 +1,19 @@
 ARG BASE_IMAGE=node:24-slim
 FROM ${BASE_IMAGE}
 
+ARG NPM_EXTRA_CA_CERT=
+
 # ca-certificates for device-code auth
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates \
  && rm -rf /var/lib/apt/lists/*
+
+RUN if [ -n "$NPM_EXTRA_CA_CERT" ]; then \
+            printf '%s\n' "$NPM_EXTRA_CA_CERT" > /usr/local/share/ca-certificates/pi-extra-ca.crt && \
+            update-ca-certificates; \
+        fi
+
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
